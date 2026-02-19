@@ -1,0 +1,86 @@
+import pandas as pd
+from pathlib import Path
+
+remap_colonnes = {
+    'Site': 'Site',
+    'SITE': 'Site',
+    'SDR_ID': 'Site',
+    
+    'CP ID': 'CP_ID',
+    'CPID': 'CP_ID',
+    'CP_ID': 'CP_ID',
+    'Display Id': 'CP_ID',
+
+    'Connector': 'Connector_ID',
+    'Connector ID': 'Connector_ID',
+    'CONNECTOR_ID': 'Connector_ID',
+    'Connecto id': 'Connector_ID',
+
+    'Connector Type': 'Connector_Type',
+    'Connector type': 'Connector_Type',
+
+    'Currency': 'Currency',
+    'CURR': 'Currency',
+
+    'Amount': 'Amount',
+    'AMOUNT': 'Amount',
+    'Amt': 'Amount',
+
+    'Consum(kWh)': 'Consumption_kWh',
+    'Consum': 'Consumption_kWh',
+    'CONSUM': 'Consumption_kWh',
+    'CONSUMED': 'Consumption_kWh',
+
+    'Duration': 'Duration',
+    'DURATION': 'Duration',
+
+    'Start': 'Start',
+    'START': 'Start',
+    'start time': 'Start',
+    'starttime': 'Start',
+
+    'End': 'End',
+    'END': 'End'
+}
+
+colonnes_finales = [
+    'Site', 'CP_ID', 'Connector_Type', 'Connector_ID',
+    'Currency', 'Amount', 'Consumption_kWh', 'Duration', 'Start', 'End'
+]
+
+racine = Path("C:/Users/C52685/Downloads/data_preprocessing/Sessions.data/encodage_csv")
+annees = {"2022", "2023", "2024", "2025"}
+output_dir = Path("C:/Users/C52685/Downloads/data_preprocessing/Sessions.data/colonnes_uniformisés")
+output_dir.mkdir(exist_ok=True)
+
+for annee in annees:
+    dossier_annee = racine / annee
+    if not dossier_annee.exists():
+        continue
+
+    output_annee_dir = output_dir / annee
+    output_annee_dir.mkdir(exist_ok=True)
+
+    for fichier in dossier_annee.glob("*.csv"):
+        try:
+            try:
+                df = pd.read_csv(fichier, encoding='utf-8', dtype=str)
+            except UnicodeDecodeError:
+                df = pd.read_csv(fichier, encoding='latin1', dtype=str)
+            
+            df.rename(columns=lambda col: remap_colonnes.get(col.strip(), col.strip()), inplace=True)
+
+            df = df[[col for col in df.columns if col in colonnes_finales]]
+
+            for col in colonnes_finales:
+                if col not in df.columns:
+                    df[col] = pd.NA
+
+            df = df[colonnes_finales]
+
+            output_path = output_annee_dir / fichier.name
+            df.to_csv(output_path, index=False, encoding='utf-8')
+
+            print(f" Uniformisé : {output_path}")
+        except Exception as e:
+            print(f" Erreur fichier {fichier.name} : {e}")
