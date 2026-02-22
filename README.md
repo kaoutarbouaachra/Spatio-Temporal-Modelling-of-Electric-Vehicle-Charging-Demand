@@ -60,13 +60,22 @@ Contains the Jupyter notebook for exploratory data analysis and initial investig
 - `analysis.ipynb` – Main EDA notebook examining distributions, correlations, and initial patterns in the EV charging dataset.
 
 ### datasets
-Contains all datasets used in the study, divided into subfolders for clarity:
-- `excel_files_standarized/` – Standardized Excel files prepared for preprocessing.
-- `glasgow datasets/` – Raw datasets specific to Glasgow region (our case study).
-- `infos_cpids/` – Metadata linking charge point identifiers to technical specifications.
-- `Master file scotland dataset/` – Core longitudinal dataset for Scotland (2022–2025).
-- `Meteo dataset/` – Weather-related data used as covariates in the model.
-- `shapefile for maps/` – Spatial boundaries for map visualizations and geographic indexing.
+
+
+The datasets supporting the findings of this study are publicly available on Zenodo:  
+[Zenodo repository](https://zenodo.org/records/18727698).
+
+This Zenodo repository contains all the processed and raw data used in the study, organized into subfolders for clarity:
+
+- `Sessions_from_ChargePlaceScotland/` – Standardized Excel files prepared for preprocessing.  
+- `glasgow_datasets/` – Raw datasets specific to the Glasgow region (case study).  
+- `infos_cpids/` – Metadata linking charge point identifiers (CPIDs) to technical specifications.  
+- `Master_file_scotland_dataset/` – Core longitudinal dataset for Scotland covering 2022–2025.  
+- `Meteo_dataset/` – Weather-related covariates used in the models.  
+- `shapefiles_for_maps/` – Spatial boundaries for map visualizations and geographic indexing.
+
+All datasets have been curated and structured to facilitate reproducibility and further analysis.
+To run the code, please **download the dataset folders** from Zenodo and place them into a local folder named `datasets/` in the project root.  
 
 ### Model
 Contains R scripts for model implementation and comparison:
