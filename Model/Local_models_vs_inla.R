@@ -9,78 +9,161 @@
 options(timeout = 600)
 set.seed(123)
 
-pkgs <- c("dplyr", "ggplot2", "spdep", "igraph", "splines", "fields", 
-          "reshape2", "viridis", "ggpubr", "sf", "zoo", "tidyr", 
+pkgs <- c("dplyr", "ggplot2", "zoo", "tidyr",
           "Metrics", "xgboost", "ranger")
 
 new_pkgs <- pkgs[!(pkgs %in% installed.packages()[,"Package"])]
 if(length(new_pkgs)) install.packages(new_pkgs, dependencies = TRUE)
 
-if (!require("INLA", quietly = TRUE)) {
-  install.packages("INLA", repos = c(getOption("repos"), 
-                                     INLA = "https://inla.r-inla-download.org/R/stable"), dep = TRUE)
-}
-invisible(lapply(c("INLA", pkgs), library, character.only = TRUE))
-invisible(lapply(c("INLA", pkgs), library, character.only = TRUE))
+invisible(lapply(pkgs, library, character.only = TRUE))
+
+
 # ------------------------------------------------------------------------------
-# 1. DATA PREPROCESSING as for INLA
+# 1. DATA PREPROCESSING
 # ------------------------------------------------------------------------------
-#change this to the path where the folder you got from our git is located
 
 path_file <- "SPATIO-TEMPORAL MODELLING OF ELECTRIC VEHICLE CHARGING DEMAND/datasets/glasgow datasets/df_final_modeling.csv"
 df_final_modeling <- read.csv(path_file, stringsAsFactors = FALSE)
+
 df <- df_final_modeling %>%
-  dplyr::filter(!CPID %in% c("62201","62202","62203","62266","62261","50433","62123"))
+  filter(!CPID %in% c("62201","62202","62203","62266","62261","50433","62123"))
 
 df$Date <- as.Date(df$Date)
-df <- df[order(df$Date), ]
-df$time_index <- as.numeric(df$Date - min(df$Date)) + 1
 
 df <- df %>%
-  mutate(across(c(connector_type, weekday, YearMonth, is_public_access,
-                  is_free, Month, CPID), as.factor))
+  arrange(CPID, Date) %>%
+  group_by(CPID) %>%
+  mutate(
+    time_index = as.numeric(Date - min(Date)) + 1,
+    lag_1  = lag(daily_sessions, 1),
+    lag_7  = lag(daily_sessions, 7),
+    lag_14 = lag(daily_sessions, 14)
+  ) %>%
+  ungroup() %>%
+  filter(!is.na(lag_14))
 
-df$id_cpid <- as.numeric(df$CPID)
+df <- df %>%
+  mutate(across(c(connector_type, weekday,
+                  is_public_access, is_free, CPID),
+                as.factor))
+
+
+
+df <- df %>%
+  arrange(CPID, Date) %>%
+  group_by(CPID) %>%
+  mutate(
+    row_id = row_number(),
+    n_obs = n(),
+    split_index = floor(0.8 * n_obs)
+  ) %>%
+  ungroup()
+
+
+features_ml <- c(
+  "connector_type",
+  "weekday",
+  "is_public_access",
+  "is_free",
+  "humidity_avg",
+  "wind_speed_avg",
+  "feels_like_avg",
+  "lag_1",
+  "lag_7",
+  "lag_14"
+)
+
 # ------------------------------------------------------------------------------
 # 2. DISAGGREGATED ML TRAINING LOOP
 # ------------------------------------------------------------------------------
+
 ml_results_list <- list()
 unique_cpids <- unique(df$CPID)
 
 for (id in unique_cpids) {
-  train_sub <- df_train_ml %>% filter(CPID == id)
-  test_sub  <- df_test_ml  %>% filter(CPID == id)
   
-  if(nrow(train_sub) < 10 || nrow(test_sub) == 0) next
+  train_sub <- df %>%
+    filter(CPID == id, row_id <= split_index)
   
-  features_local <- features_inla[sapply(train_sub[features_inla], function(x) length(unique(x)) > 1)]
+  test_sub <- df %>%
+    filter(CPID == id, row_id > split_index)
   
-  # GLM Poisson
-  formula_glm <- as.formula(paste("daily_sessions ~", paste(features_local, collapse = " + ")))
+  if(nrow(train_sub) < 30 || nrow(test_sub) == 0) next
+  
+  # Remove constant features
+  features_local <- features_ml[
+    sapply(train_sub[features_ml], function(x) length(unique(x)) > 1)
+  ]
+  
+  # Keep only relevant columns + remove NA
+  train_sub <- train_sub %>%
+    select(daily_sessions, all_of(features_local)) %>%
+    drop_na()
+  
+  test_sub <- test_sub %>%
+    select(daily_sessions, all_of(features_local)) %>%
+    drop_na()
+  
+  if(nrow(train_sub) < 30 || nrow(test_sub) == 0) next
+  
+  # ---------------- GLM POISSON ----------------
+  
+  formula_glm <- as.formula(
+    paste("daily_sessions ~", paste(features_local, collapse = " + "))
+  )
+  
   pred_glm <- NA
+  
   try({
     mod_glm  <- glm(formula_glm, family = poisson, data = train_sub)
     pred_glm <- predict(mod_glm, newdata = test_sub, type = "response")
-    pred_glm[pred_glm > max(train_sub$daily_sessions) * 5] <- mean(train_sub$daily_sessions)
   }, silent = TRUE)
   
-  # XGBoost
-  train_matrix <- model.matrix(daily_sessions ~ . -1, data = train_sub[, c("daily_sessions", features_inla)])
-  test_matrix  <- model.matrix(daily_sessions ~ . -1, data = test_sub[, c("daily_sessions", features_inla)])
-  dtrain <- xgb.DMatrix(data = train_matrix, label = train_sub$daily_sessions)
-  dtest  <- xgb.DMatrix(data = test_matrix, label = test_sub$daily_sessions)
+  # ---------------- XGBOOST ----------------
   
-  mod_xgb <- xgb.train(params = list(objective = "count:poisson", eta = 0.05), 
-                       data = dtrain, nrounds = 100, verbose = 0)
+  train_matrix <- model.matrix(
+    daily_sessions ~ . -1,
+    data = train_sub
+  )
+  
+  test_matrix <- model.matrix(
+    daily_sessions ~ . -1,
+    data = test_sub
+  )
+  
+  dtrain <- xgb.DMatrix(
+    data = train_matrix,
+    label = train_sub$daily_sessions
+  )
+  
+  dtest <- xgb.DMatrix(
+    data = test_matrix,
+    label = test_sub$daily_sessions
+  )
+  
+  mod_xgb <- xgb.train(
+    params = list(
+      objective = "count:poisson",
+      eta = 0.05,
+      max_depth = 4,
+      subsample = 0.8,
+      colsample_bytree = 0.8
+    ),
+    data = dtrain,
+    nrounds = 200,
+    verbose = 0
+  )
+  
   pred_xgb <- predict(mod_xgb, dtest)
   
-  ml_results_list[[id]] <- data.frame(
+  ml_results_list[[as.character(id)]] <- data.frame(
     CPID = id,
     Actual = test_sub$daily_sessions,
-    Pred_GLM = if(all(is.na(pred_glm))) NA else pred_glm,
+    Pred_GLM = pred_glm,
     Pred_XGB = pred_xgb
   )
 }
+
 df_ml_preds <- bind_rows(ml_results_list)
 
 # ------------------------------------------------------------------------------
@@ -323,3 +406,4 @@ for (met in metrics_list) {
 print(plot_list$MAE)
 print(plot_list$RMSE)
 print(plot_list$MAPE)
+

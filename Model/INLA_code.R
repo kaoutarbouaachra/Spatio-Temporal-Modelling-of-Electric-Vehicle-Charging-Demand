@@ -43,61 +43,6 @@ df$id_cpid <- as.numeric(df$CPID)
 # 2. TIME SERIES VISUALIZATION
 # ------------------------------------------------------------------------------
 
-# A. Aggregate Global Demand Plot
-df_daily_total <- df %>%
-  group_by(Date) %>%
-  summarise(total_sessions = sum(daily_sessions, na.rm = TRUE)) %>%
-  mutate(ma_7d = rollmean(total_sessions, k = 7, fill = NA, align = "right"))
-
-p_agg <- ggplot(df_daily_total, aes(x = Date)) +
-  geom_line(aes(y = total_sessions), color = viridisBlue, alpha = 0.3, size = 0.5) +
-  geom_line(aes(y = ma_7d), color = viridisBlue, size = 1) +
-  geom_vline(xintercept = as.numeric(cut_date), linetype = "dashed", color = "red", size = 0.6) +
-  annotate("text", x = cut_date - 5, y = max(df_daily_total$total_sessions) * 0.9, 
-           label = "Training Set", hjust = 1, family = "serif", fontface = "bold") +
-  annotate("text", x = cut_date + 5, y = max(df_daily_total$total_sessions) * 0.9, 
-           label = "Test Set", hjust = 0, family = "serif", fontface = "bold", color = "red") +
-  labs(title = "Figure 1: Aggregated EV Charging Demand",
-       subtitle = "Total daily sessions with 7-day rolling average",
-       x = "Observation Date", y = "Total Sessions (N)") +
-  theme_bw(base_family = "serif") +
-  theme(plot.title = element_text(size = 14, face = "bold"),
-        panel.grid.minor = element_blank())
-
-# Disaggregated CPID Plot
-p_cpid_full <- ggplot(df, aes(x = Date, y = daily_sessions)) +
-  geom_line(color = "grey30", size = 0.35, alpha = 0.8) +
-  geom_smooth(method = "loess", color = viridisBlue, size = 0.6, se = FALSE) +
-  facet_wrap(~CPID, scales = "free_y", ncol = 4) + 
-  theme_bw(base_family = "serif") +
-  theme(
-    strip.background = element_rect(fill = "grey95"),
-    strip.text = element_text(size = 9, face = "bold"),
-    axis.text = element_text(size = 8),
-    panel.grid.minor = element_blank(),
-    panel.spacing = unit(0.5, "lines"),
-    plot.title = element_text(size = 14, face = "bold"),
-    plot.subtitle = element_text(size = 11, face = "italic")
-  ) +
-  labs(
-    title = "Figure 2: Spatio-Temporal Demand across Charging Points",
-    subtitle = "Daily session counts per CPID with local polynomial regression (LOESS) trend",
-    x = "Observation Date", 
-    y = "Daily Charging Sessions"
-  )
-ggsave(
-  filename = "Figure_2_CPID_Full_Period.pdf", 
-  plot = p_cpid_full, 
-  width = 12, height = 14, 
-  device = "pdf",
-  dpi = 600
-)
-
-cat("La Figure 2 (période complète) a été exportée avec succès.\n")
-
-ggsave("Figure_1_Global_Demand.pdf", p_agg, width = 7, height = 4, device = "pdf")
-
-cat("Figure 1 is saved in PDF format.\n")
 
 # DISPERSION ANALYSIS: MOTIVATING LIKELIHOOD SELECTION
 df_dispersion <- df %>%
@@ -205,9 +150,18 @@ df_all <- cbind(df_all,
                 temp_spline2=temp_spline_mat[,2],
                 temp_spline3=temp_spline_mat[,3])
 df_all <- df_all[, !duplicated(names(df_all))]
+
 formula_car_rw2 <- daily_sessions ~ 
-  connector_type + weekday + is_public_access +is_free +
-  temp_spline1 + temp_spline2 + temp_spline3 +
+  connector_type + 
+  weekday + 
+  is_public_access + 
+  is_free +
+  temp_spline1 + 
+  temp_spline2 + 
+  temp_spline3 +
+  humidity_avg +
+  wind_speed_avg +
+  feels_like_avg +
   f(id_cpid, model="besag", graph="cpid_graph_connexe.graph") +
   f(time_index, model="rw2")
 
