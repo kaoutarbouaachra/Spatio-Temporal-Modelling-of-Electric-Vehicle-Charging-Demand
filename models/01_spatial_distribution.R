@@ -2,7 +2,6 @@
 # 01_spatial_distribution.R
 # PROJECT: Spatio-Temporal Modelling of EV Charging Demand
 # PURPOSE: Study area selection & spatial zoning for Glasgow
-# Run after: —  (first script in the pipeline)
 # Outputs:  data/glasgow_datasets/cpid_zone_mapping.csv
 #           figures/map_glasgow_sessions.pdf
 #           figures/map_study_zones.pdf
@@ -113,7 +112,7 @@ cpid_zone_mapping <- sessions_geo %>%
 write.csv(cpid_zone_mapping,
           file.path(RESULTS_DIR, "cpid_zone_mapping.csv"),
           row.names = FALSE)
-cat("✓ Saved cpid_zone_mapping.csv\n")
+cat("Saved cpid_zone_mapping.csv\n")
 
 # ── 7. Figures ────────────────────────────────────────────────────────────────
 cols <- viridis::viridis(3, option = "D")
@@ -132,7 +131,7 @@ p_sessions <- ggplot(glasgow_map) +
 
 ggsave(file.path(FIGURES_DIR, "map_glasgow_sessions.pdf"),
        p_sessions, width = 8, height = 7)
-cat("✓ Saved map_glasgow_sessions.pdf\n")
+cat("Saved map_glasgow_sessions.pdf\n")
 
 p_zones <- ggplot(glasgow_benchmarking) +
   geom_sf(aes(fill = study_area), color = "white") +
@@ -143,6 +142,5 @@ p_zones <- ggplot(glasgow_benchmarking) +
 
 ggsave(file.path(FIGURES_DIR, "map_study_zones.pdf"),
        p_zones, width = 8, height = 7)
-cat("✓ Saved map_study_zones.pdf\n")
+cat("Saved map_study_zones.pdf\n")
 
-cat("\n✅ Script 01 completed.\n")
