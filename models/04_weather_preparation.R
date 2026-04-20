@@ -99,10 +99,10 @@ glimpse(df_final_modeling)
 summary(df_final_modeling)
 
 # ── 8. Export ─────────────────────────────────────────────────────────────────
-# ✅ Fixed: was "C:/Users/Lenovo/Downloads/df_final_modeling.csv"
+# Fixed: was "C:/Users/Lenovo/Downloads/df_final_modeling.csv"
 output_path <- file.path(RESULTS_DIR, "df_final_modeling.csv")
 write.csv(df_final_modeling, output_path, row.names = FALSE)
-cat("✓ Saved df_final_modeling.csv →", output_path, "\n")
+cat("Saved df_final_modeling.csv →", output_path, "\n")
 
 # ── 9. Correlation analysis ───────────────────────────────────────────────────
 cor_data <- df_final_modeling %>%
@@ -115,6 +115,4 @@ corrplot(cor_data, method = "color", type = "upper",
          title = "Correlation: Weather vs. Charging Demand",
          mar = c(0, 0, 1, 0))
 dev.off()
-cat("✓ Saved correlation_weather_demand.pdf\n")
-
-cat("\n✅ Script 04 completed.\n")
+cat("Saved correlation_weather_demand.pdf\n")
