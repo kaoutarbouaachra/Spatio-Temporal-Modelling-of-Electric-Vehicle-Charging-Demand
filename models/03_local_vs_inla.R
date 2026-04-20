@@ -23,16 +23,16 @@ invisible(lapply(pkgs, library, character.only = TRUE))
 cat("Loading datasets...\n")
 df_final_modeling <- read.csv(PATH_MODELING, stringsAsFactors = FALSE)
 
-# ✅ Load INLA results saved by script 02 (were previously expected in memory)
+# Load INLA results saved by script 02 (were previously expected in memory)
 path_comparison <- file.path(RESULTS_DIR, "comparison_by_cpid.csv")
 path_test_clean <- file.path(RESULTS_DIR, "df_test_clean.csv")
 
 if (!file.exists(path_comparison) || !file.exists(path_test_clean)) {
-  stop("❌ Missing INLA results. Please run 02_inla_model.R first.")
+  stop("Missing INLA results. Please run 02_inla_model.R first.")
 }
 comparison_by_cpid <- read.csv(path_comparison, stringsAsFactors = FALSE)
 df_test_clean      <- read.csv(path_test_clean,  stringsAsFactors = FALSE)
-cat("✓ INLA results loaded.\n")
+cat("INLA results loaded.\n")
 
 # ── 2. ML data preparation ────────────────────────────────────────────────────
 df <- df_final_modeling %>%
@@ -113,7 +113,7 @@ for (id in unique(df$CPID)) {
 }
 
 df_ml_preds <- bind_rows(ml_results_list)
-cat("✓ ML training complete.\n")
+cat("ML training complete.\n")
 
 # ── 4. Metrics ────────────────────────────────────────────────────────────────
 metrics_ml <- df_ml_preds %>%
@@ -184,7 +184,7 @@ p_global <- ggplot(long_plot_data,
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
 ggsave(file.path(FIGURES_DIR, "boxplot_inla_vs_ml.pdf"), p_global, width = 11, height = 7)
-cat("✓ Saved boxplot_inla_vs_ml.pdf\n")
+cat("Saved boxplot_inla_vs_ml.pdf\n")
 
 # ── 7. Pairwise comparison ────────────────────────────────────────────────────
 create_pairwise_plot <- function(df, metric_name, color_hex = "#31688E") {
@@ -214,7 +214,7 @@ for (metric in names(metrics_palette)) {
   p <- create_pairwise_plot(all_comparison_results, metric, metrics_palette[[metric]])
   ggsave(file.path(FIGURES_DIR, paste0("Pairwise_", metric, "_Comparison.pdf")),
          p, width = 11, height = 8)
-  cat("✓ Saved Pairwise_", metric, "_Comparison.pdf\n", sep = "")
+  cat("Saved Pairwise_", metric, "_Comparison.pdf\n", sep = "")
 }
 
 # ── 8. Win rate analysis ──────────────────────────────────────────────────────
@@ -258,7 +258,6 @@ for (met in metrics_list) {
   plot_list[[met]] <- p
   ggsave(file.path(FIGURES_DIR, paste0("Dominance_Comparison_", met, ".pdf")),
          p, width = 9, height = 7)
-  cat("✓ Saved Dominance_Comparison_", met, ".pdf\n", sep = "")
+  cat("Saved Dominance_Comparison_", met, ".pdf\n", sep = "")
 }
 
-cat("\n✅ Script 03 completed.\n")
