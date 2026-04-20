@@ -1,8 +1,7 @@
 # ==============================================================================
-# 02_inla_model.R  — INLA version 13-02-2026
+# 02_inla_model.R 
 # PROJECT: Spatio-Temporal Modelling of EV Charging Demand
 # PURPOSE: Fit ICAR+RW2 and SPDE+RW2 models via INLA
-# Run after: 04_weather_preparation.R
 # Outputs:  data/glasgow_datasets/comparison_by_cpid.csv   ← used by script 03
 #           data/glasgow_datasets/df_test_clean.csv         ← used by script 03
 #           data/glasgow_datasets/resume_models_test.csv
@@ -84,7 +83,7 @@ p2 <- df %>%
 combined_fig <- ggarrange(p1, p2, ncol = 1, nrow = 2, common.legend = FALSE)
 ggsave(file.path(FIGURES_DIR, "Figure_Exploratory_Dispersion.pdf"),
        combined_fig, device = "pdf", width = 5, height = 6, units = "in", dpi = 600)
-cat("✓ Saved Figure_Exploratory_Dispersion.pdf\n")
+cat("Saved Figure_Exploratory_Dispersion.pdf\n")
 
 # ── 3. Train / test split ─────────────────────────────────────────────────────
 df <- df %>%
@@ -182,7 +181,7 @@ results_df       <- evaluate_model_test(result_car_rw2, df_all, df_train, "icar_
 results_cpid_df  <- evaluate_par_cpid_test(result_car_rw2, df_all, df_train, "icar_rw2")
 write.csv(results_df,      file.path(RESULTS_DIR, "resume_models_test.csv"),    row.names = FALSE)
 write.csv(results_cpid_df, file.path(RESULTS_DIR, "resume_par_cpid_test.csv"),  row.names = FALSE)
-cat("✓ Saved resume_models_test.csv and resume_par_cpid_test.csv\n")
+cat("Saved resume_models_test.csv and resume_par_cpid_test.csv\n")
 
 # ── 5. SPDE + RW2 ─────────────────────────────────────────────────────────────
 df_map      <- st_as_sf(df_all, coords = c("longitude", "latitude"), crs = 4326)
@@ -244,7 +243,7 @@ cat("--- TEST SET PERFORMANCE (SPDE) ---\n")
 print(eval_test)
 
 write.csv(df_all, file.path(RESULTS_DIR, "df_all_predictions_spde_rw2.csv"), row.names = FALSE)
-cat("✓ Saved df_all_predictions_spde_rw2.csv\n")
+cat("Saved df_all_predictions_spde_rw2.csv\n")
 
 # ── 6. Compare ICAR vs SPDE & save for script 03 ─────────────────────────────
 test_rows_logical <- df_all$predict == 1
@@ -274,9 +273,8 @@ global_summary <- comparison_by_cpid %>%
   summarise(Avg_MAE = mean(MAE), Avg_RMSE = mean(RMSE), Avg_MAPE = mean(MAPE))
 print(global_summary)
 
-# ✅ Save for script 03 (these were never saved before — caused a crash)
+# Save 
 write.csv(comparison_by_cpid, file.path(RESULTS_DIR, "comparison_by_cpid.csv"), row.names = FALSE)
 write.csv(df_test_clean,      file.path(RESULTS_DIR, "df_test_clean.csv"),      row.names = FALSE)
-cat("✓ Saved comparison_by_cpid.csv and df_test_clean.csv\n")
+cat("Saved comparison_by_cpid.csv and df_test_clean.csv\n")
 
-cat("\n✅ Script 02 completed.\n")
